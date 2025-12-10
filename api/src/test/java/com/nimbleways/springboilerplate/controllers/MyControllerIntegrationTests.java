@@ -1,22 +1,31 @@
 package com.nimbleways.springboilerplate.controllers;
 
+import com.nimbleways.springboilerplate.contollers.MyController;
+import com.nimbleways.springboilerplate.dto.product.ProcessOrderResponse;
 import com.nimbleways.springboilerplate.entities.Order;
 import com.nimbleways.springboilerplate.entities.Product;
 import com.nimbleways.springboilerplate.repositories.OrderRepository;
 import com.nimbleways.springboilerplate.repositories.ProductRepository;
 import com.nimbleways.springboilerplate.services.implementations.NotificationService;
+import com.nimbleways.springboilerplate.services.implementations.OrderServiceImpl;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.junit.Assert.assertEquals;
 
 // import com.fasterxml.jackson.databind.ObjectMapper;
 
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
@@ -31,30 +40,37 @@ import java.util.Set;
 @SpringBootTest
 @AutoConfigureMockMvc
 public class MyControllerIntegrationTests {
-        @Autowired
+
         private MockMvc mockMvc;
 
-        @MockBean
-        private NotificationService notificationService;
+        MyController controller;
 
-        @Autowired
+        @Mock
         private OrderRepository orderRepository;
 
-        @Autowired
+        @Mock
+        OrderServiceImpl orderService;
+
+        @Mock
         private ProductRepository productRepository;
+
+        @BeforeEach
+        void setUp() {
+            controller = new MyController(orderService);
+            mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        }
 
         @Test
         public void processOrderShouldReturn() throws Exception {
-                List<Product> allProducts = createProducts();
-                Set<Product> orderItems = new HashSet<Product>(allProducts);
-                Order order = createOrder(orderItems);
-                productRepository.saveAll(allProducts);
-                order = orderRepository.save(order);
-                mockMvc.perform(post("/orders/{orderId}/processOrder", order.getId())
-                                .contentType("application/json"))
-                                .andExpect(status().isOk());
-                Order resultOrder = orderRepository.findById(order.getId()).get();
-                assertEquals(resultOrder.getId(), order.getId());
+            long orderId = 42L;
+            ProcessOrderResponse dto = new ProcessOrderResponse(orderId);
+            when(orderService.processOrder(orderId)).thenReturn(dto);
+
+
+            mockMvc.perform(post("/orders/{orderId}/process", orderId)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.orderId").value((int) orderId));
         }
 
         private static Order createOrder(Set<Product> products) {

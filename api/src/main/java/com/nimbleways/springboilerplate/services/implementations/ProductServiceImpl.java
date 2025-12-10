@@ -65,7 +65,11 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private boolean isOutOfSeason(Product product) {
-        return LocalDate.now().plusDays(product.getLeadTime()).isAfter(product.getSeasonEndDate());
+        LocalDate seasonEnd = product.getSeasonEndDate();
+        if (seasonEnd == null) {
+            return false; // ou true selon ta règle métier
+        }
+        return LocalDate.now().plusDays(product.getLeadTime()).isAfter(seasonEnd);
     }
 
     private boolean isNotYetInSeason(Product product) {
